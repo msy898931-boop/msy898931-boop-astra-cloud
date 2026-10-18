@@ -1,98 +1,94 @@
-# Open decisions — answer these before any code
+# Open decisions
 
-Nothing gets built until each item below has a decision. Items are ordered by
-how much they block.
+Two decisions block everything. The rest are smaller and can wait.
 
-## D1 — Where the plan lives (RESOLVED)
-
-Resolved: the plan lives in its own repository,
-`msy898931-boop/msy898931-boop-astra-cloud`, with a mirror on the
-`plan/astra-cloud-commercial` branch of `asp` (`docs/astra-cloud/`).
-
-| | |
-| --- | --- |
-| Primary | this repository |
-| Mirror | `asp` @ `plan/astra-cloud-commercial` |
-| Effect on `asp` `main` | none — new files only, nothing changed or deleted |
-
-**One thing worth doing (not blocking):** the repository is currently
-**public** and the automation token cannot change that. It contains commercial
-strategy, pricing and a legal plan — set it to private:
-
-> Settings → Change visibility → Make private
-
-## D2 — Product boundary
-
-Confirm the line in `PLAN.md` §4.1:
-
-- [ ] We sell a **volatility/risk filter** and never a direction signal.
-- [ ] We keep the "Edge: none measured" honesty rule even where it costs sales.
-- [ ] No token/credit economy, no auto-trading, ever.
-
-If you want to cross this line, say so explicitly — it changes the legal
-category, the payment rails, and the whole plan.
-
-## D3 — Scope of this work (RESOLVED)
-
-Resolved: **plan + docs only, on a branch**. When approved, product code lands
-as new modules in this repo rather than a separate one — the science, tests and
-engine are already here, so a second repo would only add release coupling.
-
-- [x] Plan lives in `docs/astra-cloud/` on `plan/astra-cloud-commercial`
-- [ ] Product code location (decide at build time): new top-level module vs.
-      under an existing package
-
-## D4 — Money rail, phase 1
-
-- [ ] **A.** Crypto only (USDT TRC-20) — fastest, works today, smaller market.
-- [ ] **B.** Wait for a foreign entity before charging anyone.
-- [ ] **C.** Free-only for now; no payments until Phase 5.
-
-Which one? And: **do you already have a crypto wallet** you would receive into?
-
-## D5 — Entity plan (Phase 5)
-
-- [ ] Turkey · [ ] Georgia · [ ] UAE · [ ] Not yet decided
-- [ ] Do you have (or can you get) a partner/director in that country?
-
-## D6 — Reuse strategy (simplified)
-
-Now that the work lives inside `asp`, the reuse question collapses: the engine,
-the research code and the 597 tests are **already in this repo**. New product
-code can import them directly.
-
-- [ ] **A.** Import the research/engine modules directly (recommended — no
-      duplication, no version skew).
-- [ ] **B.** Still factor a pinned internal package for a clean boundary.
-
-No external dependency is needed either way.
-
-## D7 — First thing to build
-
-My recommendation is **quality gates first** (`ruff` + `mypy` + coverage), as
-the assessment rated it high-impact / low-effort and it makes every later
-refactor safe. Confirm or override:
-
-- [ ] Quality gates first
-- [ ] Multi-tenant auth first
-- [ ] Volatility product surface first
-- [ ] Something else: ______
-
-## D8 — Language of the product
-
-`SELLING.md` notes the existing pricing page is **Arabic (RTL)** to match the
-bot and market. For ASTRA Cloud:
-
-- [ ] Arabic-first · [ ] English-first · [ ] Both from day one
-
-## D9 — Name
-
-Is **"ASTRA Cloud"** right, or do you want the commercial product to have its
-own brand separate from `asp`?
-
-- [ ] Keep ASTRA Cloud
-- [ ] New name: ______
+**Corrected 2026-10-18.** Three decisions from the first version are now moot,
+because the work they gated is already built. They are recorded at the bottom
+under "Closed".
 
 ---
 
-_Questions prepared by an AI agent (OpenHands) on behalf of @msy898931-boop._
+## D-A — Payment rail (blocks launch) 🔴
+
+This is the real blocker. `docs/SELLING.md` is written end to end around
+**Stripe Payment Links**, and Stripe does not serve Syria. The runbook cannot be
+executed as written.
+
+**Verified blocked for Syria:** Stripe, PayPal, Payoneer, Lemon Squeezy,
+Gumroad, Payhip. **Uncertain:** Paddle. **Works today:** crypto.
+
+Pick one:
+
+- [ ] **A. Crypto only, direct.** USDT TRC-20 to a wallet; activate manually via
+      the existing `/grant <chat_id> pro`. Works today, zero setup, smallest
+      market. The code already supports this path.
+- [ ] **B. Crypto + a merchant-of-record** that accepts a Syrian operator
+      (needs verification — none is confirmed).
+- [ ] **C. Foreign entity first**, then Paddle/Stripe. Best long-term, slowest,
+      and needs a partner or director in that country.
+- [ ] **D. Something else** you have in mind.
+
+**What I need from you:** which rail, and whether you already hold a crypto
+wallet you intend to use for business receipts.
+
+**What I will do once you pick:** rewrite `SELLING.md` around it, and make
+activation work without any Stripe webhook (the manual `/grant` path already
+survives, so this is smaller than it sounds).
+
+---
+
+## D-B — Accounts: build now, or sell on the chat-id gate first? 🟡
+
+Today tiers are keyed to **Telegram chat ids** (`entitlements.py`), and the web
+app uses **one static key**. That works for a handful of buyers and does not
+scale past one operator.
+
+- [ ] **A. Sell first, build accounts later.** Ship the rail, take the first
+      buyers on the chat-id gate, build accounts when volume justifies it.
+      *(Fastest to revenue. Honest about the limit.)*
+- [ ] **B. Build accounts before selling.** Slower, cleaner, no migration later.
+- [ ] **C. Both in parallel.**
+
+**My recommendation: A.** The gate is rate-limited, the product is read-only by
+construction, and the first ten buyers do not need a login system. Revenue
+first, then the plumbing.
+
+---
+
+## Closed — no decision needed
+
+### D1 — Where the plan lives ✅
+Its own repository, `msy898931-boop/msy898931-boop-astra-cloud`, with a mirror
+on the `plan/astra-cloud-commercial` branch of `asp`. Nothing in `asp` changed.
+
+### D2 — Product boundary ✅ **decided**
+Confirmed: sell the **volatility filter**, never a direction signal. This is
+already what the code does — `volatility.py` ships the Arabic line
+"لا يتنبّأ بالاتجاه — فقط بحجم الحركة".
+
+### D7 — First thing to build ✅ **already built**
+The choice was quality gates. They were built before the decision was made —
+`ruff`, `mypy` and coverage run in CI and pass. See `STATE_OF_PLAY.md` §1.
+
+---
+
+## Still open, but not blocking
+
+### D4 — Entity jurisdiction
+Turkey · Georgia · UAE · not yet decided. Needs a partner or director.
+Only matters once fiat is wanted (Phase E).
+
+### D5 — Language
+Arabic-first · English-first · bilingual. The code is already bilingual
+(`i18n.js`, and Arabic copy in the volatility alert).
+
+### D6 — Reuse strategy
+The engine and research code live in `asp`; new product code should import them
+directly rather than duplicate them. Low stakes — decide at build time.
+
+### D8 — Name and domain
+`ASTRA` is used throughout. Whether to keep it publicly is your call.
+
+### D9 — First paying-customer channel
+Where the first buyers come from. Not a code decision; worth deciding before
+Phase A completes.

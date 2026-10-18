@@ -31,7 +31,18 @@ what keeps the product legal, sellable on payment platforms, and honest.
 | Rail (now) | Crypto (USDT) via a gateway with crypto payouts |
 | Rail (later) | Turkish/Georgian entity → Paddle or Stripe |
 | Legal | No advice, no execution, no managed money → no licence needed |
-| Build order | Quality gates → multi-tenant → mobile → billing → launch |
+| Build order | **Quality gates ✅ done · volatility surface ✅ done · mobile ✅ done** → accounts → **payment rail** → legal → launch |
+
+> **Correction, verified 2026-10-18.** Three phases this plan originally
+> scheduled as future work are **already built and passing**: the quality gates
+> (`ruff`/`mypy`/coverage in CI), the volatility product surface
+> (`volatility.py` + `vol_model.json` + engine-parity test), and the real mobile
+> experience (offline shell + Web Push). See `STATE_OF_PLAY.md` for the evidence.
+>
+> The remaining blocker is not code. It is that **`docs/SELLING.md` is built
+> around Stripe Payment Links, and Stripe does not serve Syria** — so the
+> product is ready to sell and the rail is not. That is now the top of the
+> roadmap, not phase 4.
 
 ---
 
@@ -77,21 +88,36 @@ The same study is explicit, and we must respect it:
 **Consequence for the product:** we cannot sell direction, signals, or "win
 rate". Anyone who does is either lying or curve-fitting. We sell **volatility**.
 
-### 1.3 Engineering state (from `docs/ASSESSMENT_2026-10-16.md`)
+### 1.3 Engineering state (re-measured 2026-10-18, superseding the assessment)
 
-| Check | Result |
-| --- | --- |
-| Score | **84.5 / 100** — "strong engineering tool, not yet a product" |
-| Python tests | 597 passing, 0 failing (CI-green) |
-| C++ test binaries | 19/19 pass |
-| Committed secrets | none |
-| Read-only by construction | yes — a software bug cannot lose money |
-| Linter / type checker / coverage | **none** |
-| Public gate | **one static key** — no expiry, no per-user accounts |
-| Live usage | **2 APK downloads, 0 desktop downloads** |
+The assessment below was accurate on **2026-10-16**. It is no longer current:
+six of its twelve gaps closed within two days. These are the measured figures
+from commit `b3a1845`, produced by running the tools.
 
-The assessment's own verdict: the gap is **not "better code"** — it is
-(1) a real mobile experience, (2) engineering quality gates, (3) a real gate.
+| Check | Assessment said (16 Oct) | **Measured now (18 Oct)** |
+| --- | --- | --- |
+| Score | 84.5 / 100 | 84.5 — but 6 gaps since closed |
+| Python tests | 597 | **972 passing**, 4 skipped |
+| C++ test binaries | 19/19 pass | 19 (unchanged) |
+| Committed secrets | none | none |
+| Read-only by construction | yes | yes |
+| **Linter** | **none** | ✅ **`ruff check .` → all checks passed** |
+| **Type checker** | **none** | ✅ **`mypy` → no issues in 65 files** |
+| **Coverage** | **none** | ✅ **78 %, floor enforced at 75 %** |
+| Offline shell | missing | ✅ built (`sw.js`) |
+| Web Push | missing | ✅ built + real crypto round-trip test |
+| Gate rate limiting | missing | ✅ built (`ASTRA_GATE_LOCKOUT_S=900`) |
+| Oversized `app.js` | 1675 lines | ✅ split into nine scripts (`aa0b6fc`) |
+| Public gate | one static key | ⚠️ still one static key — now rate-limited |
+| Live usage | 2 APK downloads | not re-measured |
+
+**The corrected verdict:** the engineering gap the assessment identified is
+closed. What remains is *productisation* — accounts, a legal surface, Android
+hardening, and above all a payment rail that works from Syria.
+
+Test count detail (measured): `bot` 152, `tracker` 44, `research` 50,
+`akoan` 59, `advisor` 92, `mobile` 162, `tests` 308, `bridge` 105 = **972**.
+The README table says 961; `mobile` and `bridge` are understated by 11.
 
 ---
 
@@ -322,17 +348,26 @@ This violates every platform's terms and burns both accounts. Not considered.
 - Every output that could be read as a recommendation carries the disclaimer.
 - The transparency page is generated from the same numbers the engine uses.
 
-### 6.3 Quality gates (the cheapest, highest-impact fix)
+### 6.3 Quality gates — ✅ already built (verified)
 
-The assessment called this the clearest signal of "not yet professional", and
-rated it **high impact / low effort**:
+The plan originally called this "the cheapest, highest-impact fix" and put it
+first. That reasoning was correct, and the work is **already done**:
 
-- `ruff` (lint) — fail CI on error.
-- `mypy` (types) — fail CI on new errors.
-- `coverage` — publish, and set a floor that may only rise.
+| Gate | File | Verified |
+| --- | --- | --- |
+| Lint | `ruff.toml` | `ruff check .` → **all checks passed** |
+| Types | `mypy.ini` | `mypy bot tracker akoan advisor bridge mobile src` → **no issues, 65 files** |
+| Coverage | `requirements-dev.txt` | **78 %**, floor `--fail-under=75` |
+| CI wiring | `.github/workflows/ci.yml`, job `quality` | ✅ |
 
-This ships **before** any feature. It is also the cheapest way to look
-professional to any future partner or acquirer.
+Landed in `98187f1` and `eed7511`. The rule set is deliberately narrow —
+correctness and clarity only, with the reasoning written into `ruff.toml`.
+`mypy` excludes tests on purpose (duck-typed fakes; annotations there would add
+noise without catching real bugs). Both choices are defensible.
+
+**Therefore this phase is closed and needs no work.** The honest next step is
+not to rebuild it, but to **raise the floor as coverage grows** and keep the
+gate green.
 
 ---
 
@@ -373,38 +408,79 @@ Expect **slow, compounding** growth. Plan for 12–18 months to meaningful MRR.
 
 ---
 
-## 8. Roadmap
+## 8. Roadmap (corrected against measured reality)
 
-### Phase 0 — Foundations (Week 1–2)
-- Create repo + branch (blocked on token permission — see §10).
-- Add `ruff` + `mypy` + coverage CI. **No features until this is green.**
-- Write `PRIVACY.md` and `TERMS.md` (required before any store or launch).
-- Document which bot owns `TELEGRAM_BOT_TOKEN` (prevents the 409 issue).
+The original six-phase roadmap assumed three phases were unbuilt. They are not.
+**Phases 0, 2 and 3 are done.** What remains is reordered so the actual blocker
+comes first.
 
-### Phase 1 — Multi-tenant core (Week 3–6)
-- Accounts, sessions, plans, entitlements enforced server-side.
-- Replace the static key; keep an operator bypass for admin.
+### ✅ Already complete — no work needed
+
+| Was phase | Item | Evidence |
+| --- | --- | --- |
+| 0 | Quality gates | `ruff` + `mypy` + coverage in CI, all green (`eed7511`) |
+| 2 | Real mobile | offline shell (`sw.js`) + Web Push (`webpush.py`, `e65512e`) |
+| 3 | Volatility surface | `volatility.py` + `vol_model.json` + parity test; Arabic copy states the boundary |
+| — | Plans/tiers | `entitlements.py`, dormant until `ASTRA_UPGRADE_URL` is set |
+| — | Pricing page | `mobile/pricing.html` |
+| — | Gate rate limiting | `ASTRA_GATE_LOCKOUT_S=900` (`6af91db`) |
+
+### Phase A — The payment rail (now first; was phase 4)
+
+This is the blocker. `docs/SELLING.md` assumes **Stripe Payment Links**, and
+Stripe does not serve Syria — so the runbook cannot be executed as written.
+
+- Rewrite `SELLING.md` around a rail that actually works from Syria.
+- Decide the rail (see `OPEN_DECISIONS.md` D4): crypto (USDT TRC-20) direct, or
+  a merchant-of-record that accepts the operator.
+- Build entitlement activation that does not depend on a Stripe webhook — the
+  current design already uses a manual `/grant <chat_id> pro`, which survives
+  the change.
+- Test the full path: pay → activate → `/plan` reads `pro`.
+- **Nothing else ships before this works**, because without it there is no
+  revenue and no launch.
+
+### Phase B — Accounts and multi-tenancy (was phase 1)
+
+- Real accounts, sessions, server-side plan enforcement.
+- Retire the single static key; keep an operator bypass.
 - Per-tenant quotas and rate limits.
+- Note: `entitlements.py` keys tiers to Telegram chat ids. That is a working
+  bridge, not the end state — it must become login-keyed.
 
-### Phase 2 — Mobile that is actually a product (Week 7–10)
-- Offline cache of the **last reading** + offline banner + skeletons.
-- **Real Web Push** (VAPID), not bot-only.
-- Harden Android (`cleartext`, `allowBackup`).
+### Phase C — Legal surface (was spread across phases)
 
-### Phase 3 — Volatility product surface (Week 11–14)
-- Ship the calibrated band classifier (`run_calibrated`, label = "forward vol
-  above trailing median"), reporting **ECE and coverage**, not accuracy.
-- Fold the news-quiet window into the same feature rather than separate code.
-- Rebuild the transparency page from the volatility model (AUC 0.73 story).
+- `PRIVACY.md` and `TERMS.md` — verified absent today. Required by stores, by
+  payment providers, and by GDPR if EU buyers are accepted.
+- A refund/cancellation policy (the payment provider will require a public one).
+- Keep the honesty disclaimers on every output.
 
-### Phase 4 — Billing + launch (Week 15–18)
-- Crypto rail live; entitlement webhooks tested end-to-end.
-- Free tier public; Pro behind payment.
-- Publish the transparency page.
+### Phase D — Hardening (small, specific, verified open)
 
-### Phase 5 — Entity + fiat (Month 5–8)
-- Turkey/Georgia entity; Paddle/Stripe onboarding.
-- Migrate willing buyers; keep crypto rail for the rest.
+| Item | Evidence | Fix |
+| --- | --- | --- |
+| Android cleartext | `usesCleartextTraffic="true"` in `AndroidManifest.xml` | remove, or scope to debug |
+| Android backup | `allowBackup="true"` | set false |
+| Two bots, one token | both `bot/telegram_bot.py:411` and `astra_bot.py:974` read `TELEGRAM_BOT_TOKEN` | document which owns it (409 otherwise) |
+| Oversized files | `terminal.js` 1281, `astra_bot.py` 1066 | split, as `app.js` already was |
+| Heavy clone | `.git` 107 MB, `research/data` 51 MB | Git-LFS or on-demand fetch |
+
+### Phase E — Entity + fiat (was phase 5)
+
+- Turkey/Georgia entity; Paddle or Stripe onboarding.
+- Migrate willing buyers; keep the crypto rail for the rest.
+
+### Ordering rationale
+
+Phase A first because it is the only thing standing between a finished product
+and revenue. Phase B second because the current gate does not scale past one
+operator. Phase C before any public launch because a store will reject an app
+with no privacy policy. Phase D is cheap and can be done in parallel.
+
+**One correction to the original schedule:** it put quality gates before
+everything, "no features until green". That was right, and it is why this
+roadmap now starts four phases later than the original — the foundation was
+actually poured.
 
 ---
 
